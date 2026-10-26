@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Database{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Database Management</h1><div class="sub">Create, view, edit, and delete Facebook records.</div></div></div>
+<div class="kpi-grid" id="db-info"><div class="loading">Loading database info...</div></div>
+
+<div class="card" style="margin-bottom:16px;">
+  <h2 id="record-form-title" style="margin-top:0;">Add Facebook Record</h2>
+  <form id="record-form" onsubmit="saveRecord(event)">
+    <div class="toolbar" style="flex-wrap:wrap;">
+      <input id="record-author" type="text" placeholder="Author name">
+      <select id="record-gender">
+        <option value="UNKNOWN">Unknown gender</option><option value="MALE">Male</option>
+        <option value="FEMALE">Female</option><option value="NEUTER">Neuter</option>
+      </select>
+      <input id="record-title" type="text" placeholder="Post title">
+      <input id="record-likes" type="number" min="0" value="0" placeholder="Likes" style="width:110px;">
+      <input id="record-comments" type="number" min="0" value="0" placeholder="Comments" style="width:130px;">
+      <select id="record-label">
+        <option value="">No manual label</option><option value="Positive">Positive</option>
+        <option value="Neutral">Neutral</option><option value="Negative">Negative</option>
+      </select>
+    </div>
+    <textarea id="record-text" rows="3" placeholder="Comment text" style="width:100%; margin:12px 0;"></textarea>
+    <button id="save-record-button" class="btn" type="submit">Add Record</button>
+    <button id="cancel-edit-button" class="btn btn-ghost" type="button" onclick="resetRecordForm()" style="display:none;">Cancel Edit</button>
+  </form>
+</div>
+
+<div class="card">
+  <div id="database-records"><div class="loading">Loading records...</div></div>
+  <div id="database-pagination" style="margin-top:16px; display:flex; gap:8px; justify-content:center; align-items:center;"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let databasePage = 1;
+let databasePages = 1;
+let currentRecords = [];
+let editingRecordId = null;
+
+function dbEscape(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  return String(value).replace(/[&<>"']/g, ch => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[ch]);
+}
+
+async function loadDbInfo() {
+  const response = await API.get("/api/admin/database/info");
+  const container = document.getElementById("db-info");
+  container.innerHTML = Object.entries(response.data).map(([key, value]) =>
+    `<div class="kpi-card"><div class="label">${dbEscape(key.replace(/_/g, " "))}</div><div class="value">${dbEscape(value)}</div></div>`
+  ).join("");
+}
+
+async function loadDatabaseRecords(page = databasePage) {
+  const response = await API.get(`/api/admin/database/records?page=${page}&per_page=50`);
+  currentRecords = response.data || [];
+  databasePage = response.pagination.page;
+  databasePages = response.pagination.pages;
+  const rows = currentRecords.map(row => `<tr>
+    <td>${row.id}</td><td>${dbEscape(row.facebook_record_id)}</td>
+    <td>${dbEscape(row.author_name)}</td><td style="max-width:360px; white-space:pre-wrap; overflow-wrap:anywhere;">${dbEscape(row.text)}</td>
+    <td>${dbEscape(row.gender)}</td><td>${dbEscape(row.sentiment)}</td><td>${dbEscape(row.label)}</td>
+    <td>${dbEscape(row.likes_count)}</td><td>${dbEscape(row.comments_count)}</td>
+    <td>${row.is_duplicate ? '<span class="tag Negative">Duplicate</span>' : '<span class="tag Positive">Active</span>'}</td>
+    <td><button type="button" class="btn btn-sm" onclick="editRecord(${row.id})">Edit</button>
+        <button type="button" class="btn btn-sm btn-danger" onclick="deleteRecord(${row.id})">Delete</button></td>
+  </tr>`).join("");
+  document.getElementById("database-records").innerHTML = currentRecords.length
+    ? `<div style="overflow:auto"><table style="min-width:1300px"><thead><tr>
+        <th>ID</th><th>Facebook ID</th><th>Author</th><th>Text</th><th>Gender</th><th>Sentiment</th>
+        <th>Manual Label</th><th>Likes</th><th>Comments</th><th>Status</th><th>Actions</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="sub">${response.pagination.total} records in database, including duplicates retained for cleaning audit.</p>`
+    : '<div class="empty">No Facebook records in the database.</div>';
+  document.getElementById("database-pagination").innerHTML = `
+    <button class="btn btn-ghost" ${databasePage <= 1 ? "disabled" : ""} onclick="loadDatabaseRecords(${databasePage - 1})">Previous</button>
+    <span>Page ${databasePage} of ${databasePages || 1}</span>
+    <button class="btn btn-ghost" ${databasePage >= databasePages ? "disabled" : ""} onclick="loadDatabaseRecords(${databasePage + 1})">Next</button>`;
+}
+
+function editRecord(id) {
+  const record = currentRecords.find(item => item.id === id);
+  if (!record) return;
+  editingRecordId = id;
+  document.getElementById("record-form-title").textContent = `Edit Facebook Record #${id}`;
+  document.getElementById("record-author").value = record.author_name || "";
+  document.getElementById("record-gender").value = record.gender || "UNKNOWN";
+  document.getElementById("record-title").value = record.post_title || "";
+  document.getElementById("record-likes").value = record.likes_count || 0;
+  document.getElementById("record-comments").value = record.comments_count || 0;
+  document.getElementById("record-label").value = record.label || "";
+  document.getElementById("record-text").value = record.text || "";
+  document.getElementById("save-record-button").textContent = "Save Changes";
+  document.getElementById("cancel-edit-button").style.display = "inline-block";
+  document.getElementById("record-form-title").scrollIntoView({ behavior: "smooth" });
+}
+
+function resetRecordForm() {
+  editingRecordId = null;
+  document.getElementById("record-form").reset();
+  document.getElementById("record-gender").value = "UNKNOWN";
+  document.getElementById("record-likes").value = "0";
+  document.getElementById("record-comments").value = "0";
+  document.getElementById("record-form-title").textContent = "Add Facebook Record";
+  document.getElementById("save-record-button").textContent = "Add Record";
+  document.getElementById("cancel-edit-button").style.display = "none";
+}
+
+async function saveRecord(event) {
+  event.preventDefault();
+  const payload = {
+    author_name: document.getElementById("record-author").value.trim(),
+    gender: document.getElementById("record-gender").value,
+    post_title: document.getElementById("record-title").value.trim(),
+    likes_count: Number(document.getElementById("record-likes").value || 0),
+    comments_count: Number(document.getElementById("record-comments").value || 0),
+    label: document.getElementById("record-label").value || null,
+    text: document.getElementById("record-text").value,
+  };
+  try {
+    if (editingRecordId) await API.put(`/api/data/${editingRecordId}`, payload);
+    else await API.post("/api/data", payload);
+    toast(editingRecordId ? "Record updated" : "Record created", "success");
+    resetRecordForm();
+    await Promise.all([loadDbInfo(), loadDatabaseRecords(editingRecordId ? databasePage : 1)]);
+  } catch (error) { toast(error.message, "error"); }
+}
+
+async function deleteRecord(id) {
+  if (!confirm(`Delete database record #${id}? This action cannot be undone.`)) return;
+  try {
+    await API.del(`/api/data/${id}`);
+    toast("Record deleted", "success");
+    await Promise.all([loadDbInfo(), loadDatabaseRecords(databasePage)]);
+  } catch (error) { toast(error.message, "error"); }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  try { await Promise.all([loadDbInfo(), loadDatabaseRecords(1)]); }
+  catch (error) { toast(error.message, "error"); }
+});
+</script>
+{% endblock %}

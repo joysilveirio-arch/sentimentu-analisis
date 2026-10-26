@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Audit Logs</h1></div></div>
+<div class="card"><div id="audit"><div class="loading">Loading...</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadAudit() {
+  const r = await API.get("/api/admin/audit");
+  let html = '<table><thead><tr><th>When</th><th>User</th><th>Action</th><th>Target</th></tr></thead><tbody>';
+  for (const row of r.data) {
+    html += `<tr><td>${row.created_at}</td><td>${row.user_id||"—"}</td><td>${row.action}</td><td>${row.target||"—"}</td></tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById("audit").innerHTML = html;
+}
+document.addEventListener("DOMContentLoaded", loadAudit);
+</script>
+{% endblock %}

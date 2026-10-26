@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Search{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div><h1>Search</h1><div class="sub">Quick full-text search</div></div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <div class="toolbar">
+    <input type="text" id="q" placeholder="Search text, author, post..." style="flex:1;min-width:250px;">
+    <button class="btn" onclick="doSearch()">Search</button>
+  </div>
+</div>
+
+<div class="card">
+  <div id="results"><div class="empty">Enter a keyword and click Search.</div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function doSearch() {
+  const q = document.getElementById("q").value.trim();
+  const box = document.getElementById("results");
+  if (!q) { box.innerHTML = '<div class="empty">Enter a keyword.</div>'; return; }
+  box.innerHTML = '<div class="loading">Searching...</div>';
+  try {
+    const r = await API.get("/api/search?q=" + encodeURIComponent(q));
+    if (!r.data.length) {
+      box.innerHTML = '<div class="empty">No results.</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>ID</th><th>Author</th><th>Text</th><th>Sentiment</th><th>Date</th></tr></thead><tbody>';
+    for (const row of r.data) {
+      const s = row.sentiment || "Unlabeled";
+      html += `<tr>
+        <td>${row.id}</td>
+        <td>${row.author_name || "—"}</td>
+        <td>${(row.text || "").slice(0, 150)}</td>
+        <td><span class="tag ${s}">${s}</span></td>
+        <td>${row.date ? row.date.slice(0,10) : "—"}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = `<div class="empty">Error: ${e.message}</div>`;
+  }
+}
+document.getElementById("q").addEventListener("keypress", e => {
+  if (e.key === "Enter") doSearch();
+});
+</script>
+{% endblock %}

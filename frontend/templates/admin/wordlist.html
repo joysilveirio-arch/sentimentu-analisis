@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Wordlist{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Wordlist / Lexicon</h1></div></div>
+<div class="card" style="margin-bottom:16px;">
+  <div class="toolbar">
+    <input id="w-word" placeholder="Word">
+    <select id="w-sent"><option>Positive</option><option>Negative</option></select>
+    <input id="w-score" type="number" value="1" style="width:80px;">
+    <input id="w-lang" placeholder="lang (tet/ind/eng/por)" style="width:150px;">
+    <button class="btn" onclick="createWord()">Add</button>
+  </div>
+</div>
+<div class="card"><div id="wordlist-table"><div class="loading">Loading...</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadWords() {
+  const r = await API.get("/api/admin/wordlist");
+  let html = '<table><thead><tr><th>Word</th><th>Sentiment</th><th>Score</th><th>Language</th><th>Actions</th></tr></thead><tbody>';
+  for (const w of r.data) {
+    html += `<tr><td>${w.word}</td><td><span class="tag ${w.sentiment}">${w.sentiment}</span></td>
+      <td>${w.score}</td><td>${w.language}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="delWord(${w.id})">Delete</button></td></tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById("wordlist-table").innerHTML = html;
+}
+async function createWord() {
+  const d = {
+    word: document.getElementById("w-word").value.trim(),
+    sentiment: document.getElementById("w-sent").value,
+    score: parseInt(document.getElementById("w-score").value),
+    language: document.getElementById("w-lang").value.trim() || "unknown",
+  };
+  if (!d.word) { toast("Word required", "error"); return; }
+  try { await API.post("/api/admin/wordlist", d); toast("Added", "success"); loadWords(); }
+  catch (e) { toast(e.message, "error"); }
+}
+async function delWord(id) {
+  if (!confirm("Delete word?")) return;
+  try { await API.del("/api/admin/wordlist/" + id); toast("Deleted", "success"); loadWords(); }
+  catch (e) { toast(e.message, "error"); }
+}
+document.addEventListener("DOMContentLoaded", loadWords);
+</script>
+{% endblock %}

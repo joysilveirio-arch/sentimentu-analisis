@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Dataset{% endblock %}
+{% block content %}
+<style>
+  .dataset-table-wrap { max-width: 100%; overflow-x: auto; }
+  .dataset-table { width: 100%; min-width: 820px; table-layout: fixed; }
+  .dataset-table .dataset-text { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow-y: auto; }
+  .dataset-table .dataset-original, .dataset-table .dataset-cleaned { width: 32%; }
+  .dataset-empty-badge { display: inline-block; padding: 4px 8px; border-radius: 12px; background: #FEF3C7; color: #92400E; font-size: 12px; }
+  @media (max-width: 600px) { .dataset-table { min-width: 760px; } }
+</style>
+<div class="topbar">
+  <div><h1>Dataset Explorer</h1><div class="sub">Search, filter, and browse records</div></div>
+</div>
+
+<div class="card" style="margin-bottom:20px;">
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="Search text / author...">
+    <select id="f-sentiment">
+      <option value="">All Sentiments</option>
+      <option>Positive</option><option>Negative</option><option>Neutral</option>
+    </select>
+    <select id="f-gender">
+      <option value="">All Genders</option>
+      <option>MALE</option><option>FEMALE</option><option>NEUTER</option><option>UNKNOWN</option>
+    </select>
+    <button class="btn" onclick="applyFilters()">Apply</button>
+    <button class="btn btn-ghost" onclick="resetFilters()">Reset</button>
+  </div>
+</div>
+
+<div class="card">
+  <div id="dataset-table" class="dataset-table-wrap"><div class="loading">Loading...</div></div>
+  <div id="pagination" style="margin-top:16px; display:flex; gap:8px; justify-content:center;"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dataset.js') }}"></script>
+{% endblock %}

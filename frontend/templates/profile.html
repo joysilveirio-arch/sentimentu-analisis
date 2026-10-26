@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<style>
+  .profile-page { max-width: 1120px; margin: 0 auto; }
+  .profile-page .topbar { margin-bottom: 20px; }
+  .profile-page .topbar .sub { margin-top: 5px; }
+  .profile-header-card, .profile-info-card, .profile-security-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .045);
+  }
+  .profile-header-card { display: flex; align-items: center; gap: 22px; padding: 26px 28px; margin-bottom: 18px; }
+  .profile-avatar { width: 86px; height: 86px; flex: 0 0 86px; display: grid; place-items: center; color: var(--primary); background: #EFF6FF; border: 1px solid #DBEAFE; border-radius: 50%; }
+  .profile-avatar svg { width: 42px; height: 42px; }
+  .profile-identity { min-width: 0; }
+  .profile-identity h2 { color: var(--text); font-size: 25px; line-height: 1.2; font-weight: 800; overflow-wrap: anywhere; }
+  .profile-email { color: var(--muted); margin-top: 7px; overflow-wrap: anywhere; }
+  .profile-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .profile-badge { display: inline-flex; align-items: center; min-height: 25px; padding: 4px 10px; border-radius: 999px; font-size: 11px; line-height: 1; font-weight: 700; letter-spacing: .035em; }
+  .profile-badge.role { color: #1D4ED8; background: #EFF6FF; }
+  .profile-badge.active { color: #15803D; background: #DCFCE7; }
+  .profile-badge.inactive { color: #64748B; background: #E2E8F0; }
+  .profile-content-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(260px, .85fr); gap: 18px; align-items: start; }
+  .profile-info-card, .profile-security-card { padding: 22px; }
+  .profile-section-heading { margin: 0 0 18px; color: var(--text); font-size: 16px; font-weight: 750; }
+  .profile-info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .profile-info-item { min-width: 0; display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid #E8EDF4; border-radius: 10px; background: #FFFFFF; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+  .profile-info-item:hover { border-color: #BFDBFE; box-shadow: 0 4px 12px rgba(37, 99, 235, .07); transform: translateY(-1px); }
+  .profile-info-icon { width: 34px; height: 34px; flex: 0 0 34px; display: grid; place-items: center; color: var(--primary); background: #EFF6FF; border-radius: 9px; }
+  .profile-info-icon svg, .profile-security-icon svg { width: 18px; height: 18px; }
+  .profile-info-label { color: var(--muted); font-size: 11px; font-weight: 650; margin: 1px 0 5px; }
+  .profile-info-value { color: var(--text); font-size: 13px; font-weight: 650; overflow-wrap: anywhere; }
+  .profile-security-card { min-height: 210px; }
+  .profile-security-icon { width: 42px; height: 42px; display: grid; place-items: center; margin-bottom: 15px; color: var(--primary); background: #EFF6FF; border-radius: 12px; }
+  .profile-security-card p { color: var(--muted); font-size: 13px; line-height: 1.65; }
+  @media (max-width: 800px) {
+    .profile-content-grid { grid-template-columns: minmax(0, 1fr); }
+    .profile-header-card { padding: 22px; }
+  }
+  @media (max-width: 560px) {
+    .profile-header-card { flex-direction: column; align-items: flex-start; gap: 15px; padding: 20px; }
+    .profile-avatar { width: 72px; height: 72px; flex-basis: 72px; }
+    .profile-avatar svg { width: 36px; height: 36px; }
+    .profile-identity h2 { font-size: 22px; }
+    .profile-info-card, .profile-security-card { padding: 18px; }
+    .profile-info-grid { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+<div class="profile-page">
+  <div class="topbar">
+    <div>
+      <h1>My Profile</h1>
+      <div class="sub">Your account details and security information</div>
+    </div>
+  </div>
+
+  <section class="profile-header-card" aria-label="Profile summary">
+    <div class="profile-avatar" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"></circle><path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path>
+      </svg>
+    </div>
+    <div class="profile-identity">
+      <h2>{{ current_user.username }}</h2>
+      <div class="profile-badges">
+        <span class="profile-badge role">{{ current_user.role }}</span>
+        <span class="profile-badge {{ 'active' if current_user.status|lower == 'active' else 'inactive' }}">{{ current_user.status|title }}</span>
+      </div>
+      <div class="profile-email">{{ current_user.email }}</div>
+    </div>
+  </section>
+
+  <div class="profile-content-grid">
+    <section class="profile-info-card">
+      <h2 class="profile-section-heading">Account Information</h2>
+      <div class="profile-info-grid">
+        <div class="profile-info-item">
+          <span class="profile-info-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20a7 7 0 0 1 14 0"></path></svg></span>
+          <div><div class="profile-info-label">Username</div><div class="profile-info-value">{{ current_user.username }}</div></div>
+        </div>
+        <div class="profile-info-item">
+          <span class="profile-info-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m4 7 8 6 8-6"></path></svg></span>
+          <div><div class="profile-info-label">Email</div><div class="profile-info-value">{{ current_user.email }}</div></div>
+        </div>
+        <div class="profile-info-item">
+          <span class="profile-info-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 19 6v5c0 4.5-3 7.5-7 10-4-2.5-7-5.5-7-10V6l7-3Z"></path><path d="m9 12 2 2 4-4"></path></svg></span>
+          <div><div class="profile-info-label">Role</div><div class="profile-info-value">{{ current_user.role }}</div></div>
+        </div>
+        <div class="profile-info-item">
+          <span class="profile-info-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"></circle><path d="m8.5 12 2.2 2.2 4.8-5"></path></svg></span>
+          <div><div class="profile-info-label">Status</div><div class="profile-info-value">{{ current_user.status|title }}</div></div>
+        </div>
+        <div class="profile-info-item">
+          <span class="profile-info-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="16" rx="2"></rect><path d="M7.5 3v4M16.5 3v4M3.5 10h17"></path></svg></span>
+          <div><div class="profile-info-label">Member Since</div><div class="profile-info-value">{{ current_user.created_at.strftime('%b %d, %Y') if current_user.created_at else '—' }}</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="profile-security-card">
+      <div class="profile-security-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 1 1 8 0v3"></path><circle cx="12" cy="15" r="1"></circle></svg></div>
+      <h2 class="profile-section-heading">Security</h2>
+      <p>Password and sign-in are managed through the existing account security system.</p>
+    </section>
+  </div>
+</div>
+{% endblock %}

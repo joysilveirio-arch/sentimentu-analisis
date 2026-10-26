@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Sentiment{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Sentiment Analysis</h1><div class="sub">Analyze text instantly with the active Wordlist (lexicon-based); this is separate from Decision Tree prediction.</div></div></div>
+<div class="card">
+  <textarea id="txt" rows="4" style="width:100%;margin-bottom:12px;" placeholder="Enter Facebook text..."></textarea>
+  <button class="btn" onclick="analyzeText()">Analyze</button>
+  <div id="result" style="margin-top:20px;"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function analyzeText() {
+  const txt = document.getElementById("txt").value.trim();
+  if (!txt) return;
+  try {
+    const r = await API.post("/api/sentiment/analyze-text", { text: txt });
+    const d = r.data;
+    document.getElementById("result").innerHTML = `
+      <div class="kpi-card"><div class="label">Sentiment</div><div class="value">${d.sentiment}</div>
+      <div>Method: ${d.method || "wordlist"} | Score: ${d.score} | Positive words: ${d.positive} | Negative words: ${d.negative}</div></div>`;
+  } catch (e) { toast(e.message, "error"); }
+}
+</script>
+{% endblock %}

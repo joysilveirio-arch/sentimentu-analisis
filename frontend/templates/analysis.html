@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Data Analysis{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Data Analysis</h1><div class="sub">Sentiment trends and engagement</div></div></div>
+<div class="charts-grid">
+  <div class="card"><div class="card-title">Sentiment Over Time</div><div class="chart-container"><canvas id="chart-tr"></canvas></div></div>
+  <div class="card"><div class="card-title">Engagement Over Time</div><div class="chart-container"><canvas id="chart-en"></canvas></div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadAnalysis() {
+  try {
+    const tr = await API.get("/api/dashboard/trends");
+    CHARTS.line("chart-tr", tr.data.map(x=>x.date), [
+      { label:"Positive", data: tr.data.map(x=>x.Positive), borderColor:"#16A34A", tension:0.3 },
+      { label:"Negative", data: tr.data.map(x=>x.Negative), borderColor:"#DC2626", tension:0.3 },
+      { label:"Neutral", data: tr.data.map(x=>x.Neutral), borderColor:"#64748B", tension:0.3 },
+    ]);
+    const en = await API.get("/api/dashboard/engagement");
+    CHARTS.line("chart-en", en.data.map(x=>x.date), [
+      { label:"Likes", data: en.data.map(x=>x.likes), borderColor:"#2563EB", tension:0.3 },
+      { label:"Comments", data: en.data.map(x=>x.comments), borderColor:"#F59E0B", tension:0.3 },
+    ]);
+  } catch (e) { toast(e.message, "error"); }
+}
+document.addEventListener("DOMContentLoaded", loadAnalysis);
+</script>
+{% endblock %}

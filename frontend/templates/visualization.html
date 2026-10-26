@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Data Visualization{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Data Visualization</h1><div class="sub">All charts from real data</div></div></div>
+<div class="charts-grid">
+  <div class="card"><div class="card-title">Sentiment by Gender</div><div class="chart-container"><canvas id="chart-sg"></canvas></div></div>
+  <div class="card"><div class="card-title">Top Posts</div><div class="chart-container"><canvas id="chart-tp"></canvas></div></div>
+  <div class="card"><div class="card-title">Likes vs Comments</div><div class="chart-container"><canvas id="chart-lc"></canvas></div></div>
+  <div class="card"><div class="card-title">Top Positive Words</div><div class="chart-container"><canvas id="chart-pw"></canvas></div></div>
+  <div class="card"><div class="card-title">Top Negative Words</div><div class="chart-container"><canvas id="chart-nw"></canvas></div></div>
+  <div class="card"><div class="card-title">Label Distribution</div><div class="chart-container"><canvas id="chart-lb"></canvas></div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadViz() {
+  try {
+    const sg = await API.get("/api/viz/sentiment-by-gender");
+    const labels = sg.data.map(x => x.gender);
+    CHARTS.bar("chart-sg", labels, [
+      { label: "Positive", data: sg.data.map(x => x.Positive), backgroundColor: "#16A34A" },
+      { label: "Negative", data: sg.data.map(x => x.Negative), backgroundColor: "#DC2626" },
+      { label: "Neutral", data: sg.data.map(x => x.Neutral), backgroundColor: "#64748B" },
+    ]);
+    const tp = await API.get("/api/viz/top-posts");
+    CHARTS.bar("chart-tp", tp.data.map(x => x.title), [{ data: tp.data.map(x => x.count), backgroundColor: "#2563EB" }]);
+    const lc = await API.get("/api/viz/likes-comments");
+    CHARTS.scatter("chart-lc", lc.data.map(x => ({ x: x.likes, y: x.comments })), "Posts");
+    const pw = await API.get("/api/viz/top-positive-words");
+    CHARTS.bar("chart-pw", pw.data.map(x => x.word), [{ data: pw.data.map(x => x.score), backgroundColor: "#16A34A" }]);
+    const nw = await API.get("/api/viz/top-negative-words");
+    CHARTS.bar("chart-nw", nw.data.map(x => x.word), [{ data: nw.data.map(x => x.score), backgroundColor: "#DC2626" }]);
+    const lb = await API.get("/api/viz/label-distribution");
+    CHARTS.doughnut("chart-lb", lb.data.map(x => x.label), lb.data.map(x => x.value));
+  } catch (e) { toast("Viz: " + e.message, "error"); }
+}
+document.addEventListener("DOMContentLoaded", loadViz);
+</script>
+{% endblock %}

@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="tet">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Login • Facebook Analytics</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            background:
+                radial-gradient(circle at 15% 20%, rgba(37, 99, 235, .30), transparent 30%),
+                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, .16), transparent 28%),
+                linear-gradient(135deg, #071226, #0b1424 55%, #07111d);
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            color: white;
+        }
+
+        /* ==============================
+           MAIN LOGIN CONTAINER
+        ============================== */
+
+        .login-container {
+            width: 100%;
+            max-width: 985px;
+            min-height: 665px;
+
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+
+            border-radius: 24px;
+            overflow: hidden;
+
+            background: #101b2c;
+
+            border: 1px solid rgba(255,255,255,.10);
+
+            box-shadow:
+                0 30px 80px rgba(0,0,0,.45),
+                0 0 50px rgba(37,99,235,.10);
+        }
+
+        /* ==============================
+           LEFT PANEL
+        ============================== */
+
+        .left-panel {
+            position: relative;
+            overflow: hidden;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #2563eb 0%,
+                    #1d4ed8 50%,
+                    #1646bd 100%
+                );
+
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+
+            text-align: center;
+            padding: 45px;
+        }
+
+        /* decorative circles */
+
+        .left-panel::before {
+            content: "";
+            position: absolute;
+
+            width: 300px;
+            height: 300px;
+
+            background: rgba(255,255,255,.08);
+
+            border-radius: 50%;
+
+            top: -110px;
+            left: -100px;
+        }
+
+        .left-panel::after {
+            content: "";
+            position: absolute;
+
+            width: 300px;
+            height: 300px;
+
+            background: rgba(255,255,255,.06);
+
+            border-radius: 50%;
+
+            bottom: -180px;
+            right: -100px;
+        }
+
+        .left-content {
+            position: relative;
+            z-index: 2;
+
+            width: 100%;
+        }
+
+        /* Facebook logo */
+
+        .facebook-logo {
+            width: 56px;
+            height: 56px;
+
+            margin: 0 auto 18px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background: white;
+
+            border-radius: 15px;
+
+            color: #2563eb;
+
+            font-size: 34px;
+            font-weight: 900;
+
+            box-shadow: 0 10px 30px rgba(0,0,0,.15);
+        }
+
+        .left-title {
+            font-size: 27px;
+            font-weight: 800;
+
+            margin-bottom: 10px;
+        }
+
+        .left-description {
+            max-width: 380px;
+
+            margin: 0 auto;
+
+            color: rgba(255,255,255,.82);
+
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        /* Profile image */
+
+        .profile-wrapper {
+            width: 190px;
+            height: 190px;
+
+            margin: 32px auto 20px;
+
+            border-radius: 50%;
+
+            overflow: hidden;
+
+            border: 5px solid white;
+
+            box-shadow:
+                0 15px 35px rgba(0,0,0,.25);
+        }
+
+        .profile-wrapper img {
+            width: 100%;
+            height: 100%;
+
+            object-fit: cover;
+
+            display: block;
+        }
+
+        .welcome-title {
+            font-size: 20px;
+            font-weight: 800;
+
+            margin-bottom: 6px;
+        }
+
+        .welcome-text {
+            font-size: 13px;
+            color: rgba(255,255,255,.72);
+
+            margin-bottom: 25px;
+        }
+
+        .continue-btn {
+            display: inline-flex;
+
+            align-items: center;
+            justify-content: center;
+
+            padding: 10px 28px;
+
+            border-radius: 30px;
+
+            border: 1px solid rgba(255,255,255,.55);
+
+            background: transparent;
+
+            color: white;
+
+            font-size: 13px;
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition: .25s ease;
+        }
+
+        .continue-btn:hover {
+            background: white;
+            color: #2563eb;
+
+            transform: translateY(-2px);
+        }
+
+        /* ==============================
+           RIGHT PANEL
+        ============================== */
+
+        .right-panel {
+            padding: 52px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #101b2c,
+                    #0d1828
+                );
+
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+
+            gap: 12px;
+
+            margin-bottom: 34px;
+        }
+
+        .brand-icon {
+            width: 46px;
+            height: 46px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 12px;
+
+            background: #2563eb;
+
+            font-size: 27px;
+            font-weight: 900;
+
+            box-shadow: 0 8px 20px rgba(37,99,235,.25);
+        }
+
+        .brand-name {
+            font-size: 15px;
+            font-weight: 800;
+
+            margin-bottom: 4px;
+        }
+
+        .brand-subtitle {
+            color: #8390a5;
+
+            font-size: 11px;
+        }
+
+        .secure-label {
+            color: #5b9cff;
+
+            font-size: 10px;
+            font-weight: 800;
+
+            letter-spacing: 2px;
+
+            margin-bottom: 13px;
+        }
+
+        .right-title {
+            font-size: 30px;
+            font-weight: 800;
+
+            margin-bottom: 12px;
+        }
+
+        .right-description {
+            color: #8996aa;
+
+            font-size: 13px;
+            line-height: 1.7;
+
+            max-width: 430px;
+
+            margin-bottom: 28px;
+        }
+
+        /* ==============================
+           FORM
+        ============================== */
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+
+            margin-bottom: 8px;
+
+            color: #e8edf5;
+
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            height: 45px;
+
+            padding: 0 15px;
+
+            border-radius: 9px;
+
+            border: 1px solid #314057;
+
+            background: #e8eef7;
+
+            color: #172033;
+
+            font-size: 13px;
+
+            outline: none;
+
+            transition: .2s ease;
+        }
+
+        .input-wrapper input:focus {
+            border-color: #3b82f6;
+
+            box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+        }
+
+        .password-toggle {
+            position: absolute;
+
+            right: 13px;
+            top: 50%;
+
+            transform: translateY(-50%);
+
+            border: none;
+            background: transparent;
+
+            color: #6e9be8;
+
+            font-size: 11px;
+            font-weight: 600;
+
+            cursor: pointer;
+        }
+
+        /* ==============================
+           BUTTONS
+        ============================== */
+
+        .login-btn {
+            width: 100%;
+            height: 46px;
+
+            margin-top: 5px;
+
+            border: none;
+            border-radius: 9px;
+
+            background: #3b82f6;
+
+            color: white;
+
+            font-size: 13px;
+            font-weight: 800;
+
+            cursor: pointer;
+
+            transition: .25s ease;
+        }
+
+        .login-btn:hover {
+            background: #2563eb;
+
+            transform: translateY(-1px);
+
+            box-shadow: 0 8px 22px rgba(37,99,235,.25);
+        }
+
+        .login-btn:disabled {
+            opacity: .65;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .register-btn {
+            width: 100%;
+            height: 46px;
+
+            margin-top: 10px;
+
+            border: 1px solid #344257;
+
+            border-radius: 9px;
+
+            background: transparent;
+
+            color: #e4e9f1;
+
+            font-size: 13px;
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition: .25s ease;
+        }
+
+        .register-btn:hover {
+            background: rgba(255,255,255,.04);
+
+            border-color: #52627b;
+        }
+
+        /* ==============================
+           ERROR
+        ============================== */
+
+        .error-message {
+            display: none;
+
+            margin-bottom: 16px;
+            padding: 11px 13px;
+
+            border-radius: 8px;
+
+            background: rgba(239,68,68,.10);
+
+            border: 1px solid rgba(239,68,68,.25);
+
+            color: #fca5a5;
+
+            font-size: 12px;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* ==============================
+           FOOTER
+        ============================== */
+
+        .footer {
+            margin-top: 25px;
+            padding-top: 20px;
+
+            border-top: 1px solid rgba(255,255,255,.08);
+
+            color: #65738a;
+
+            text-align: center;
+
+            font-size: 10px;
+            line-height: 1.6;
+        }
+
+        /* ==============================
+           RESPONSIVE
+        ============================== */
+
+        @media (max-width: 850px) {
+
+            body {
+                padding: 15px;
+            }
+
+            .login-container {
+                grid-template-columns: 1fr;
+
+                max-width: 550px;
+            }
+
+            .left-panel {
+                min-height: 500px;
+            }
+
+            .right-panel {
+                padding: 40px 30px;
+            }
+        }
+
+        @media (max-width: 500px) {
+
+            .left-panel {
+                padding: 35px 20px;
+            }
+
+            .right-panel {
+                padding: 30px 22px;
+            }
+
+            .left-title {
+                font-size: 23px;
+            }
+
+            .right-title {
+                font-size: 26px;
+            }
+
+            .profile-wrapper {
+                width: 155px;
+                height: 155px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="login-container">
+
+    <!-- ==========================================
+         LEFT SIDE
+    =========================================== -->
+
+    <section class="left-panel">
+
+        <div class="left-content">
+
+            <div class="facebook-logo">
+                F
+            </div>
+
+            <h1 class="left-title">
+                Facebook Analytics
+            </h1>
+
+            <p class="left-description">
+                Analiza dadus Facebook, sentimentu no rezultadu
+                machine learning iha plataforma ida.
+            </p>
+
+            <div class="profile-wrapper">
+                <img
+                    src="{{ url_for('static', filename='img/profile-login.jpg') }}"
+                    alt="Profile">
+            </div>
+
+            <h2 class="welcome-title">
+                Bem-vindu!
+            </h2>
+
+            <p class="welcome-text">
+                Facebook Social Media Analytics
+            </p>
+
+            <button
+                type="button"
+                class="continue-btn"
+                onclick="document.getElementById('username').focus()">
+                Kontinua ba Login →
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <!-- ==========================================
+         RIGHT SIDE
+    =========================================== -->
+
+    <section class="right-panel">
+
+        <div class="brand">
+
+            <div class="brand-icon">
+                F
+            </div>
+
+            <div>
+                <div class="brand-name">
+                    Facebook Analytics
+                </div>
+
+                <div class="brand-subtitle">
+                    Plataforma Inteligénsia Media Sosial
+                </div>
+            </div>
+
+        </div>
+
+
+        <div class="secure-label">
+            ASESU SEGURU
+        </div>
+
+        <h2 class="right-title">
+            Bem-vindu fila fali
+        </h2>
+
+        <p class="right-description">
+            Tama login atu asesu dashboard analytics,
+            analiza sentimentu no ferramenta machine learning.
+        </p>
+
+
+        <form id="login-form">
+
+            <div id="error-message" class="error-message"></div>
+
+
+            <div class="form-group">
+
+                <label for="username">
+                    Utilizador ka Email
+                </label>
+
+                <div class="input-wrapper">
+
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        placeholder="admin@example.com"
+                        autocomplete="username"
+                        required>
+
+                </div>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="password">
+                    Password
+                </label>
+
+                <div class="input-wrapper">
+
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="Password"
+                        autocomplete="current-password"
+                        required>
+
+                    <button
+                        type="button"
+                        class="password-toggle"
+                        id="toggle-password">
+                        Hatudu
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <button
+                type="submit"
+                class="login-btn"
+                id="login-btn">
+
+                Tama Login
+
+            </button>
+
+
+            <button
+                type="button"
+                class="register-btn"
+                onclick="alert('Konta foun bele kria liu husi administrador.')">
+
+                Kria Konta Foun
+
+            </button>
+
+        </form>
+
+
+        <div class="footer">
+            Plataforma Facebook Social Media Analytics,
+            Machine Learning no Sentiment Analysis.
+        </div>
+
+    </section>
+
+</div>
+
+
+<script src="{{ url_for('static', filename='js/api.js') }}"></script>
+
+<script>
+
+    const loginForm = document.getElementById("login-form");
+    const usernameInput = document.getElementById("username");
+    const passwordInput = document.getElementById("password");
+    const loginButton = document.getElementById("login-btn");
+    const errorMessage = document.getElementById("error-message");
+
+    /* ==========================
+       SHOW / HIDE PASSWORD
+    ========================== */
+
+    document
+        .getElementById("toggle-password")
+        .addEventListener("click", function () {
+
+            if (passwordInput.type === "password") {
+
+                passwordInput.type = "text";
+                this.textContent = "Subar";
+
+            } else {
+
+                passwordInput.type = "password";
+                this.textContent = "Hatudu";
+
+            }
+
+        });
+
+
+    /* ==========================
+       LOGIN
+    ========================== */
+
+    loginForm.addEventListener("submit", async function (e) {
+
+        e.preventDefault();
+
+        errorMessage.classList.remove("show");
+        errorMessage.textContent = "";
+
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value.trim();
+
+        if (!username || !password) {
+
+            errorMessage.textContent =
+                "Favor prenxe username/email no password.";
+
+            errorMessage.classList.add("show");
+
+            return;
+        }
+
+
+        loginButton.disabled = true;
+        loginButton.textContent = "Login hela...";
+
+
+        try {
+
+            await API.post("/api/auth/login", {
+                username: username,
+                password: password
+            });
+
+
+            window.location.href = "/dashboard";
+
+
+        } catch (error) {
+
+            console.error("Login error:", error);
+
+            errorMessage.textContent =
+                error.message || "Login la konsege. Favor koko username no password.";
+
+            errorMessage.classList.add("show");
+
+            loginButton.disabled = false;
+            loginButton.textContent = "Tama Login";
+
+        }
+
+    });
+
+</script>
+
+</body>
+</html>

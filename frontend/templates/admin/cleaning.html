@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Data Cleaning{% endblock %}
+{% block content %}
+<style>
+  .cleaning-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .cleaning-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:12px; margin-top:16px; }
+  .cleaning-preview-wrap { max-width:100%; overflow:auto; max-height:68vh; }
+  .cleaning-preview-table { width:100%; min-width:720px; table-layout:fixed; }
+  .cleaning-preview-table th, .cleaning-preview-table td { overflow-wrap:anywhere; vertical-align:top; }
+  .cleaning-preview-table .clean-text-cell { white-space:pre-wrap; max-height:180px; overflow-y:auto; }
+  .cleaning-status-empty { display:inline-block; padding:4px 8px; border-radius:12px; background:#FEF3C7; color:#92400E; }
+</style>
+<div class="topbar"><div><h1>Data Cleaning</h1><div class="sub">Preview or apply cleaned text while keeping the original records</div></div></div>
+<div class="card" style="margin-bottom:16px;">
+  <div class="cleaning-actions">
+    <button id="preview-clean-button" class="btn btn-ghost" onclick="previewClean()">Preview Cleaning</button>
+    <button id="run-clean-button" class="btn" onclick="runClean()">Run Cleaning</button>
+    <a class="btn btn-ghost" href="/api/admin/clean/export.csv">Export CSV</a>
+  </div>
+  <div id="clean-result" style="margin-top:16px;"></div>
+  <div id="clean-stats" class="cleaning-stats"></div>
+</div>
+<div id="clean-comparison-card" class="card" style="display:none; margin-bottom:16px;">
+  <h2 style="margin-top:0;">Before and After Cleaning</h2>
+  <p id="clean-comparison-count" class="muted"></p>
+  <div class="cleaning-preview-wrap">
+    <table class="cleaning-preview-table">
+      <thead><tr><th style="width:70px;">ID</th><th>Text (before)</th><th>Cleaned Text (after)</th><th style="width:190px;">Status</th></tr></thead>
+      <tbody id="clean-comparison-body"></tbody>
+    </table>
+  </div>
+</div>
+<div class="card"><h2 style="margin-top:0;">Cleaning History</h2><div id="clean-history"><div class="loading">Loading...</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+function cleanCell(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[ch]);
+}
+
+function showCleaningStats(stats) {
+  const cards = [
+    ["Total Records", stats.total_records],
+    ["Clean Records", stats.clean_records],
+    ["Cleaned Text Nonempty", stats.cleaned_text_nonempty],
+    ["Cleaned Text Empty", stats.cleaned_text_empty],
+    ["Duplicates", stats.duplicate_records],
+    ["Missing Text", stats.missing_text_records]
+  ];
+  document.getElementById("clean-stats").innerHTML = cards.map(([label, value]) =>
+    `<div class="kpi-card"><div class="label">${cleanCell(label)}</div><div class="value">${cleanCell(value)}</div></div>`
+  ).join("");
+}
+
+function renderComparison(records) {
+  const body = document.getElementById("clean-comparison-body");
+  body.innerHTML = records.map(row => {
+    const after = row.cleaned_text ?? "";
+    const status = row.status || (after.trim() ? "Cleaned" : "Mamuk depois cleaning");
+    const cleanedCell = after.trim()
+      ? cleanCell(after)
+      : `<span class="cleaning-status-empty">${cleanCell(status)}</span>`;
+    return `<tr>
+      <td>${cleanCell(row.id)}</td>
+      <td class="clean-text-cell">${cleanCell(row.text || "")}</td>
+      <td class="clean-text-cell">${cleanedCell}</td>
+      <td>${cleanCell(status)}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("clean-comparison-count").textContent = `Showing ${records.length} eligible clean records. Preview does not write to the database.`;
+  document.getElementById("clean-comparison-card").style.display = "block";
+}
+
+async function previewClean() {
+  const button = document.getElementById("preview-clean-button");
+  button.disabled = true;
+  try {
+    const response = await API.post("/api/admin/clean/preview");
+    showCleaningStats(response.data.stats);
+    renderComparison(response.data.records || []);
+    document.getElementById("clean-result").textContent = "Preview ready. Database was not changed.";
+  } catch (error) {
+    toast(error.message, "error");
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function runClean() {
+  const button = document.getElementById("run-clean-button");
+  button.disabled = true;
+  button.textContent = "Cleaning...";
+  try {
+    const response = await API.post("/api/admin/clean");
+    if (!response.success) throw new Error(response.message || "Cleaning failed");
+    showCleaningStats(response.data.stats);
+    renderComparison(response.data.records || []);
+    document.getElementById("clean-result").textContent = `Updated cleaned_text for ${response.data.updated} records. Other record fields were preserved.`;
+    toast("Cleaning complete", "success");
+  } catch (error) {
+    toast(error.message, "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Run Cleaning";
+  }
+}
+
+async function loadHistory() {
+  const container = document.getElementById("clean-history");
+  try {
+    const response = await API.get("/api/admin/cleaning/history");
+    let html = '<div class="cleaning-preview-wrap"><table><thead><tr><th>When</th><th>Original</th><th>Clean</th><th>Removed</th><th>Quality</th></tr></thead><tbody>';
+    for (const row of (response.data || [])) {
+      html += `<tr><td>${cleanCell(row.created_at)}</td><td>${cleanCell(row.original_records)}</td>
+        <td>${cleanCell(row.clean_records)}</td><td>${cleanCell(row.removed_records)}</td>
+        <td>${cleanCell(Number(row.quality_score || 0).toFixed(1))}%</td></tr>`;
+    }
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+  } catch (error) {
+    container.textContent = error.message;
+  }
+}
+document.addEventListener("DOMContentLoaded", loadHistory);
+</script>
+{% endblock %}

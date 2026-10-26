@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Decision Tree{% endblock %}
+{% block content %}
+<style>
+  .ml-warning { padding:12px 14px; border:1px solid #F59E0B; border-radius:8px; background:#FFFBEB; color:#78350F; margin:10px 0; }
+  .ml-info { padding:12px 14px; border:1px solid var(--border); border-radius:8px; background:#F8FAFC; margin:10px 0; }
+  .ml-table-wrap { max-width:100%; overflow-x:auto; }
+  .ml-table { min-width:600px; }
+  .ml-class-report { width:100%; }
+  .ml-class-report td, .ml-class-report th { text-align:right; }
+  .ml-class-report td:first-child, .ml-class-report th:first-child { text-align:left; }
+  #classification-report { white-space:pre; overflow:auto; }
+</style>
+<div class="topbar"><div><h1>Decision Tree — Train &amp; Evaluate</h1><div class="sub">Training uses automatic wordlist sentiment and keeps identical normalized text in one partition only.</div></div></div>
+<div class="card" style="margin-bottom:16px;">
+  <div class="toolbar">
+    <label>Max Depth: <input id="md" type="number" value="15" style="width:70px;"></label>
+    <label>Test Size: <input id="ts" type="number" step="0.05" value="0.2" style="width:70px;"></label>
+    <label>Max Features: <input id="mf" type="number" value="5000" style="width:90px;"></label>
+    <button id="train-button" class="btn" onclick="train()">Train Model</button>
+  </div>
+  <div id="train-result" style="margin-top:16px;"></div>
+</div>
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-title">Class Counts Before and After Split</div>
+  <div id="split-summary" class="ml-info">Train a model to see class counts.</div>
+  <div id="class-distribution" class="ml-table-wrap"></div>
+</div>
+<div class="charts-grid">
+  <div class="card"><div class="card-title">Overall Metrics</div><div id="metrics-note" class="sub"></div><div class="chart-container"><canvas id="chart-metrics"></canvas><div id="metrics-message" class="sub"></div></div><div id="overall-metrics"></div></div>
+  <div class="card"><div class="card-title">Confusion Matrix</div><div id="confusion-matrix" class="ml-table-wrap"></div></div>
+</div>
+<div class="card" style="margin-top:16px;">
+  <div class="card-title">Per-Class Test Results</div>
+  <div id="class-report-table" class="ml-table-wrap"></div>
+  <details style="margin-top:12px;"><summary>Full classification report</summary><pre id="classification-report"></pre></details>
+</div>
+<div class="card" style="margin-top:16px;">
+  <div class="card-title">Predict Text</div>
+  <textarea id="ptxt" rows="3" style="width:100%;margin-bottom:10px;" placeholder="Enter text to predict sentiment"></textarea>
+  <button class="btn" onclick="predict()">Predict</button>
+  <div id="pred-result" style="margin-top:12px;"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const ML_CLASSES = ["Positive", "Negative", "Neutral"];
+function mlEscape(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[ch]);
+}
+function renderClassDistribution(config) {
+  const raw = config.raw_class_distribution || {};
+  const unique = config.unique_class_distribution || {};
+  const train = config.train_class_distribution || {};
+  const test = config.test_class_distribution || {};
+  const metrics = config.class_metrics || {};
+  document.getElementById("class-distribution").innerHTML = `
+    <table class="ml-table"><thead><tr><th>Class</th><th>Source records</th><th>Unique texts</th><th>Training</th><th>Testing</th><th>Test support</th></tr></thead><tbody>
+    ${ML_CLASSES.map(label => `<tr><td>${label}</td><td>${Number(raw[label] || 0)}</td><td>${Number(unique[label] || 0)}</td><td>${Number(train[label] || 0)}</td><td>${Number(test[label] || 0)}</td><td>${Number((metrics[label] || {}).support || 0)}</td></tr>`).join("")}
+    </tbody></table>`;
+  document.getElementById("split-summary").textContent =
+    `${config.unique_texts || 0} unique-text examples; ${config.split_strategy || "unknown"} split. ` +
+    `${config.duplicate_text_groups || 0} identical-text groups collapsed before splitting; ` +
+    `${config.conflicting_duplicate_groups || 0} groups had conflicting automatic labels.`;
+}
+function renderClassReport(config) {
+  const report = config.class_metrics || {};
+  document.getElementById("class-report-table").innerHTML = `
+    <table class="ml-class-report"><thead><tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th></tr></thead><tbody>
+    ${ML_CLASSES.map(label => {
+      const row = report[label] || {};
+      return `<tr><td>${label}</td><td>${Number(row.precision || 0).toFixed(3)}</td><td>${Number(row.recall || 0).toFixed(3)}</td><td>${Number(row.f1_score || 0).toFixed(3)}</td><td>${Number(row.support || 0)}</td></tr>`;
+    }).join("")}</tbody></table>`;
+}
+function renderConfusionMatrix(matrixData) {
+  if (!matrixData || !matrixData.matrix) return;
+  const labels = matrixData.labels || ML_CLASSES;
+  let html = '<table><thead><tr><th>Actual \\ Predicted</th>';
+  html += labels.map(label => `<th>${mlEscape(label)}</th>`).join("") + '</tr></thead><tbody>';
+  matrixData.matrix.forEach((row, i) => {
+    html += `<tr><th>${mlEscape(labels[i])}</th>${row.map(value => `<td>${Number(value)}</td>`).join("")}</tr>`;
+  });
+  document.getElementById("confusion-matrix").innerHTML = html + '</tbody></table>';
+}
+
+async function train() {
+  const button = document.getElementById("train-button");
+  button.disabled = true;
+  button.textContent = "Training...";
+  const d = {
+    max_depth: parseInt(document.getElementById("md").value),
+    test_size: parseFloat(document.getElementById("ts").value),
+    max_features: parseInt(document.getElementById("mf").value),
+  };
+  try {
+    const response = await API.post("/api/admin/ml/train", d);
+    if (!response.success) { toast(response.message, "error"); return; }
+    const history = response.history;
+    const config = history.configuration || {};
+    const warnings = config.warnings || [];
+    const warningBox = warnings.length
+      ? `<div class="ml-warning"><strong>Evaluation limitation</strong><ul>${warnings.map(item => `<li>${mlEscape(item)}</li>`).join("")}</ul></div>`
+      : '<div class="ml-info">All three classes have sufficient held-out test support.</div>';
+    const validity = config.evaluation_valid
+      ? "Held-out evaluation has minimum support for all classes."
+      : "Metrics below are descriptive only; the test set does not support a reliable quality claim.";
+    document.getElementById("train-result").innerHTML = warningBox +
+      `<p>${mlEscape(validity)}</p><p>Training/evaluation target: automatic Wordlist sentiment. Manual label-column records: ${Number(config.manual_label_count || 0)} (not used in this run).</p>`;
+    renderClassDistribution(config);
+    renderClassReport(config);
+    renderConfusionMatrix(history.confusion_matrix);
+    document.getElementById("classification-report").textContent = history.classification_report || "No report returned.";
+
+    document.getElementById("overall-metrics").innerHTML = `
+      <table><thead><tr><th>Accuracy</th><th>Weighted Precision</th><th>Weighted Recall</th><th>Weighted F1</th></tr></thead><tbody><tr>
+      <td>${(Number(history.accuracy) * 100).toFixed(2)}%</td><td>${(Number(history.precision) * 100).toFixed(2)}%</td>
+      <td>${(Number(history.recall) * 100).toFixed(2)}%</td><td>${(Number(history.f1_score) * 100).toFixed(2)}%</td></tr></tbody></table>`;
+    document.getElementById("metrics-note").textContent = validity;
+    if (config.evaluation_valid) {
+      document.getElementById("chart-metrics").style.display = "block";
+      document.getElementById("metrics-message").textContent = "";
+      CHARTS.bar("chart-metrics", ["Accuracy", "Precision", "Recall", "F1"], [
+        { data: [history.accuracy, history.precision, history.recall, history.f1_score].map(v => v * 100), backgroundColor: ["#2563EB", "#16A34A", "#F59E0B", "#DC2626"] }
+      ]);
+    } else {
+      document.getElementById("chart-metrics").style.display = "none";
+      document.getElementById("metrics-message").textContent = "Chart hidden because one or more classes lack sufficient test support.";
+    }
+    toast("Model trained; review the evaluation warning and class support.", config.evaluation_valid ? "success" : "info");
+  } catch (error) { toast(error.message, "error"); }
+  finally { button.disabled = false; button.textContent = "Train Model"; }
+}
+
+async function predict() {
+  const txt = document.getElementById("ptxt").value.trim();
+  if (!txt) return;
+  try {
+    const response = await API.post("/api/predict", { text: txt });
+    if (response.success) {
+      document.getElementById("pred-result").innerHTML =
+        `<span class="tag ${ML_CLASSES.includes(response.predicted_label) ? response.predicted_label : "Neutral"}">${mlEscape(response.predicted_label)}</span> (confidence: ${(response.confidence * 100).toFixed(1)}%)`;
+    } else toast(response.message, "error");
+  } catch (error) { toast(error.message, "error"); }
+}
+</script>
+{% endblock %}

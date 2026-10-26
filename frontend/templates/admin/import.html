@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Import Dataset{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Import Dataset</h1><div class="sub">Upload CSV</div></div></div>
+<div class="card" style="margin-bottom:16px;">
+  <input type="file" id="csvfile" accept=".csv">
+  <button class="btn" onclick="upload()" style="margin-left:10px;">Upload & Import</button>
+  <div id="import-result" style="margin-top:16px;"></div>
+</div>
+<div class="card"><div id="import-history"><div class="loading">Loading...</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function upload() {
+  const f = document.getElementById("csvfile").files[0];
+  if (!f) { toast("Select a CSV", "error"); return; }
+  try {
+    const r = await API.upload("/api/admin/import", f);
+    if (r.success) { toast("Imported!", "success"); loadHistory(); }
+    else toast(r.message, "error");
+  } catch (e) { toast(e.message, "error"); }
+}
+async function loadHistory() {
+  const r = await API.get("/api/admin/import/history");
+  let html = '<table><thead><tr><th>File</th><th>Total</th><th>Imported</th><th>Failed</th><th>Duplicate</th><th>Status</th></tr></thead><tbody>';
+  for (const row of r.data) {
+    html += `<tr><td>${row.filename}</td><td>${row.total_rows}</td><td>${row.imported_rows}</td>
+      <td>${row.failed_rows}</td><td>${row.duplicate_rows}</td><td>${row.status}</td></tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById("import-history").innerHTML = html;
+}
+document.addEventListener("DOMContentLoaded", loadHistory);
+</script>
+{% endblock %}

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Labeling{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div><h1>Labeling</h1><div class="sub">Assign ground-truth labels to records</div></div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <div class="toolbar">
+    <input type="number" id="rec-id" placeholder="Record ID" style="width:120px;">
+    <select id="label-select">
+      <option value="">Select label...</option>
+      <option>Positive</option>
+      <option>Neutral</option>
+      <option>Negative</option>
+    </select>
+    <button class="btn" onclick="assignLabel()">Assign Label</button>
+    <label style="display:flex;align-items:center;gap:6px;max-width:300px;">
+      <input type="checkbox" id="confirm-empty-assignment">
+      Confirm label if cleaned text is empty
+    </label>
+  </div>
+  <div id="assign-result" style="margin-top:12px;"></div>
+</div>
+
+<div class="card">
+  <div class="card-title">Recent Records (labelable)</div>
+  <div id="label-records"><div class="loading">Loading...</div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function escapeLabelValue(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[ch]);
+}
+
+function labelTag(label) {
+  const allowed = ["Positive", "Negative", "Neutral"];
+  if (!allowed.includes(label)) return "—";
+  return `<span class="tag ${label}">${label}</span>`;
+}
+
+async function loadRecords() {
+  try {
+    const response = await API.get("/api/data?page=1&per_page=15");
+    if (!response.data.length) {
+      document.getElementById("label-records").innerHTML = '<div class="empty">No records yet.</div>';
+      return;
+    }
+    let html = '<div style="max-width:100%;overflow-x:auto;"><table style="min-width:900px;table-layout:fixed;"><thead><tr><th>ID</th><th>Author</th><th>Original Text</th><th>Cleaned Text</th><th>Label</th><th>Action</th></tr></thead><tbody>';
+    for (const row of response.data) {
+      const cleanedEmpty = row.cleaned_text == null || !String(row.cleaned_text).trim();
+      let cleanedCell;
+      if (row.cleaned_text == null) {
+        cleanedCell = '<span class="tag Neutral">Testu mamuk depois cleaning</span>';
+      } else if (!String(row.cleaned_text).trim()) {
+        cleanedCell = '<span class="tag Neutral">Testu mamuk depois cleaning</span>';
+      } else {
+        cleanedCell = escapeLabelValue(row.cleaned_text);
+      }
+      const disabled = cleanedEmpty ? "disabled" : "";
+      const confirmation = cleanedEmpty
+        ? `<label style="display:block;margin:4px 0;font-size:12px;"><input type="checkbox" id="confirm-empty-${row.id}" onchange="toggleEmptyLabelActions(${row.id})"> Confirm</label>`
+        : "";
+      html += `<tr>
+        <td>${escapeLabelValue(row.id)}</td>
+        <td>${escapeLabelValue(row.author_name || "—")}</td>
+        <td style="white-space:pre-wrap;overflow-wrap:anywhere;max-width:280px;">${escapeLabelValue(row.text || "")}</td>
+        <td style="white-space:pre-wrap;overflow-wrap:anywhere;max-width:280px;">${cleanedCell}</td>
+        <td>${labelTag(row.label)}</td>
+        <td>${confirmation}
+          <button class="btn btn-sm" data-record="${row.id}" onclick="quickLabel(${row.id},'Positive')" ${disabled}>+</button>
+          <button class="btn btn-sm btn-ghost" data-record="${row.id}" onclick="quickLabel(${row.id},'Neutral')" ${disabled}>~</button>
+          <button class="btn btn-sm btn-danger" data-record="${row.id}" onclick="quickLabel(${row.id},'Negative')" ${disabled}>−</button>
+        </td>
+      </tr>`;
+    }
+    html += '</tbody></table></div>';
+    document.getElementById("label-records").innerHTML = html;
+  } catch (error) {
+    document.getElementById("label-records").textContent = `Error: ${error.message}`;
+  }
+}
+
+function toggleEmptyLabelActions(recordId) {
+  const confirmation = document.getElementById(`confirm-empty-${recordId}`);
+  document.querySelectorAll(`[data-record="${recordId}"]`).forEach(button => {
+    button.disabled = !confirmation?.checked;
+  });
+}
+
+async function assignLabel() {
+  const id = Number.parseInt(document.getElementById("rec-id").value, 10);
+  const label = document.getElementById("label-select").value;
+  const confirmEmpty = document.getElementById("confirm-empty-assignment").checked;
+  if (!id || !label) { toast("Record ID & label required", "error"); return; }
+  try {
+    const response = await API.post("/api/admin/labeling/assign", {
+      record_id: id, label, confirm_empty_text: confirmEmpty
+    });
+    if (!response.success) throw new Error(response.message || "Label assignment failed");
+    if (response.data.id !== id) throw new Error("The server returned a different record ID");
+    document.getElementById("assign-result").textContent = `Label assigned to record #${response.data.id}: ${response.data.label}`;
+    toast("Label assigned", "success");
+    await loadRecords();
+  } catch (error) { toast(error.message, "error"); }
+}
+
+async function quickLabel(id, label) {
+  const confirmation = document.getElementById(`confirm-empty-${id}`);
+  if (confirmation && !confirmation.checked) {
+    toast("Confirm the empty cleaned text before labeling this record", "error");
+    return;
+  }
+  try {
+    const response = await API.post("/api/admin/labeling/assign", {
+      record_id: id, label, confirm_empty_text: Boolean(confirmation?.checked)
+    });
+    if (!response.success) throw new Error(response.message || "Label assignment failed");
+    if (response.data.id !== id) throw new Error("The server returned a different record ID");
+    toast(`Label assigned to record #${response.data.id}: ${response.data.label}`, "success");
+    await loadRecords();
+  } catch (error) { toast(error.message, "error"); }
+}
+
+document.addEventListener("DOMContentLoaded", loadRecords);
+</script>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <h1>Dashboard</h1>
+    <div class="sub">Facebook Data Visualization & Sentiment Analysis</div>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card"><div class="label">Total Records</div><div class="value" id="kpi-records">—</div></div>
+  <div class="kpi-card"><div class="label">Total Likes</div><div class="value" id="kpi-likes">—</div></div>
+  <div class="kpi-card"><div class="label">Total Comments</div><div class="value" id="kpi-comments">—</div></div>
+  <div class="kpi-card positive"><div class="label">Positive</div><div class="value" id="kpi-positive">—</div></div>
+  <div class="kpi-card negative"><div class="label">Negative</div><div class="value" id="kpi-negative">—</div></div>
+  <div class="kpi-card neutral"><div class="label">Neutral</div><div class="value" id="kpi-neutral">—</div></div>
+  <div class="kpi-card"><div class="label">Unlabeled</div><div class="value" id="kpi-unlabeled">—</div></div>
+</div>
+
+<div class="charts-grid">
+  <div class="card">
+    <div class="card-title">Facebook Activity Trend</div>
+    <div class="chart-container"><canvas id="chart-trend"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Sentiment Distribution</div>
+    <div class="chart-container"><canvas id="chart-sentiment"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Engagement Analysis</div>
+    <div class="chart-container"><canvas id="chart-engagement"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Gender Analysis</div>
+    <div class="chart-container"><canvas id="chart-gender"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Top Authors</div>
+    <div class="chart-container"><canvas id="chart-authors"></canvas></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

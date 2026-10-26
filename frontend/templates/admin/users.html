@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block content %}
+<style>
+  .users-page { max-width: 1240px; margin: 0 auto; min-width: 0; }
+  .users-page .topbar { margin-bottom: 20px; }
+  .users-page .topbar .sub { margin-top: 5px; }
+  .users-panel { min-width: 0; margin-bottom: 18px; padding: 22px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 2px 8px rgba(15, 23, 42, .045); }
+  .users-panel-heading { margin: 0 0 16px; color: var(--text); font-size: 15px; font-weight: 750; }
+  .users-form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 14px; align-items: end; }
+  .users-field { display: flex; min-width: 0; flex-direction: column; gap: 7px; }
+  .users-field label { color: #334155; font-size: 12px; font-weight: 650; }
+  .users-field input, .users-field select { width: 100%; height: 42px; min-width: 0; padding: 9px 11px; color: var(--text); background: #fff; border: 1px solid var(--border); border-radius: 8px; }
+  .users-field input:focus, .users-field select:focus { outline: 3px solid rgba(37, 99, 235, .12); border-color: var(--primary); }
+  .users-create-button { height: 42px; padding: 0 18px; border-radius: 8px; box-shadow: 0 2px 4px rgba(37, 99, 235, .15); transition: background .18s ease, box-shadow .18s ease, transform .18s ease; white-space: nowrap; }
+  .users-create-button:hover { background: #1D4ED8; box-shadow: 0 5px 12px rgba(37, 99, 235, .2); transform: translateY(-1px); }
+  .users-list-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 17px; }
+  .users-list-header .users-panel-heading { margin: 0; }
+  .users-search { display: flex; align-items: center; gap: 9px; width: min(100%, 340px); min-height: 40px; padding: 0 12px; color: #94A3B8; background: #fff; border: 1px solid var(--border); border-radius: 8px; }
+  .users-search svg { width: 17px; height: 17px; flex: 0 0 17px; }
+  .users-search span { overflow: hidden; color: #94A3B8; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+  .users-table-wrap { width: 100%; min-width: 0; }
+  .users-table-wrap table { width: 100%; table-layout: fixed; }
+  .users-table-wrap th { padding-top: 12px; padding-bottom: 12px; background: #F1F5F9; }
+  .users-table-wrap th:first-child, .users-table-wrap td:first-child { width: 8%; }
+  .users-table-wrap th:nth-child(2), .users-table-wrap td:nth-child(2) { width: 18%; }
+  .users-table-wrap th:nth-child(3), .users-table-wrap td:nth-child(3) { width: 31%; }
+  .users-table-wrap th:nth-child(4), .users-table-wrap td:nth-child(4) { width: 14%; }
+  .users-table-wrap th:nth-child(5), .users-table-wrap td:nth-child(5) { width: 14%; }
+  .users-table-wrap th:nth-child(6), .users-table-wrap td:nth-child(6) { width: 15%; }
+  .users-table-wrap td { overflow-wrap: anywhere; vertical-align: middle; }
+  .user-role-badge, .user-status-badge { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 1; white-space: nowrap; }
+  .user-role-badge.admin { color: #1D4ED8; background: #DBEAFE; }
+  .user-role-badge.user { color: #475569; background: #F1F5F9; }
+  .user-status-badge.active { color: #15803D; background: #DCFCE7; }
+  .user-status-badge.inactive { color: #B91C1C; background: #FEE2E2; }
+  .user-status-badge.other { color: #475569; background: #E2E8F0; }
+  .user-status-badge::before { width: 6px; height: 6px; content: ""; border-radius: 50%; background: currentColor; }
+  .users-delete-button { min-height: 30px; padding: 5px 10px; border-radius: 7px; transition: background .18s ease, transform .18s ease; }
+  .users-delete-button:hover { background: #B91C1C; transform: translateY(-1px); }
+  @media (max-width: 1050px) {
+    .users-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .users-create-button { justify-self: start; }
+  }
+  @media (max-width: 720px) {
+    .users-panel { padding: 18px; }
+    .users-list-header { align-items: stretch; flex-direction: column; }
+    .users-search { width: 100%; }
+    .users-table-wrap thead { display: none; }
+    .users-table-wrap, .users-table-wrap tbody { display: block; width: 100%; }
+    .users-table-wrap tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; margin-bottom: 12px; padding: 14px; background: #fff; border: 1px solid var(--border); border-radius: 10px; }
+    .users-table-wrap td { display: flex; min-width: 0; flex-direction: column; gap: 5px; padding: 0; border: 0; font-size: 13px; }
+    .users-table-wrap td::before { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    .users-table-wrap td:nth-child(1)::before { content: "ID"; }
+    .users-table-wrap td:nth-child(2)::before { content: "Username"; }
+    .users-table-wrap td:nth-child(3)::before { content: "Email"; }
+    .users-table-wrap td:nth-child(4)::before { content: "Role"; }
+    .users-table-wrap td:nth-child(5)::before { content: "Status"; }
+    .users-table-wrap td:nth-child(6)::before { content: "Actions"; }
+    .users-table-wrap th:first-child, .users-table-wrap td:first-child,
+    .users-table-wrap th:nth-child(2), .users-table-wrap td:nth-child(2),
+    .users-table-wrap th:nth-child(3), .users-table-wrap td:nth-child(3),
+    .users-table-wrap th:nth-child(4), .users-table-wrap td:nth-child(4),
+    .users-table-wrap th:nth-child(5), .users-table-wrap td:nth-child(5),
+    .users-table-wrap th:nth-child(6), .users-table-wrap td:nth-child(6) { width: auto; }
+    .users-table-wrap td:nth-child(3) { grid-column: 1 / -1; }
+    .users-table-wrap td:nth-child(6) { align-items: flex-start; }
+  }
+  @media (max-width: 480px) {
+    .users-form-grid { grid-template-columns: minmax(0, 1fr); }
+    .users-create-button { width: 100%; }
+    .users-table-wrap tr { gap: 11px; }
+  }
+</style>
+<div class="users-page">
+  <div class="topbar">
+    <div>
+      <h1>User Management</h1>
+      <div class="sub">Manage users and access permissions</div>
+    </div>
+  </div>
+
+  <section class="users-panel" aria-labelledby="create-user-heading">
+    <h2 class="users-panel-heading" id="create-user-heading">Create User</h2>
+    <div class="users-form-grid">
+      <div class="users-field">
+        <label for="u-username">Username</label>
+        <input id="u-username" placeholder="Enter username" autocomplete="off">
+      </div>
+      <div class="users-field">
+        <label for="u-email">Email</label>
+        <input id="u-email" type="email" placeholder="name@example.com" autocomplete="off">
+      </div>
+      <div class="users-field">
+        <label for="u-password">Password</label>
+        <input id="u-password" placeholder="Enter password" type="password" autocomplete="new-password">
+      </div>
+      <div class="users-field">
+        <label for="u-role">Role</label>
+        <select id="u-role"><option>USER</option><option>ADMIN</option></select>
+      </div>
+      <button type="button" class="btn users-create-button" onclick="createUser()">Create User</button>
+    </div>
+  </section>
+
+  <section class="users-panel" aria-labelledby="users-list-heading">
+    <div class="users-list-header">
+      <h2 class="users-panel-heading" id="users-list-heading">Users</h2>
+      <div class="users-search" aria-label="Search username or email">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
+        <span>Search username or email...</span>
+      </div>
+    </div>
+    <div class="users-table-wrap" id="users-table"><div class="loading">Loading...</div></div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadUsers() {
+  try {
+    const r = await API.get("/api/admin/users");
+    let html = '<table><thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+    for (const u of r.data) {
+      const roleClass = (u.role || '').toLowerCase() === 'admin' ? 'admin' : 'user';
+      const statusValue = u.status || '';
+      const statusClass = statusValue.toLowerCase() === 'active' ? 'active' : (statusValue.toLowerCase() === 'inactive' ? 'inactive' : 'other');
+      const statusLabel = statusValue ? statusValue.charAt(0).toUpperCase() + statusValue.slice(1).toLowerCase() : 'Unknown';
+      html += `<tr><td>${u.id}</td><td>${u.username}</td><td>${u.email}</td><td><span class="user-role-badge ${roleClass}">${u.role}</span></td><td><span class="user-status-badge ${statusClass}">${statusLabel}</span></td>
+        <td><button class="btn btn-danger btn-sm users-delete-button" onclick="deleteUser(${u.id})">Delete</button></td></tr>`;
+    }
+    html += '</tbody></table>';
+    document.getElementById("users-table").innerHTML = html;
+  } catch (e) { toast(e.message, "error"); }
+}
+async function createUser() {
+  const d = {
+    username: document.getElementById("u-username").value.trim(),
+    email: document.getElementById("u-email").value.trim(),
+    password: document.getElementById("u-password").value,
+    role: document.getElementById("u-role").value,
+  };
+  if (!d.username || !d.password) { toast("Username & password required", "error"); return; }
+  try { await API.post("/api/admin/users", d); toast("Created", "success"); loadUsers(); }
+  catch (e) { toast(e.message, "error"); }
+}
+async function deleteUser(id) {
+  if (!confirm("Delete user?")) return;
+  try { await API.del("/api/admin/users/" + id); toast("Deleted", "success"); loadUsers(); }
+  catch (e) { toast(e.message, "error"); }
+}
+document.addEventListener("DOMContentLoaded", loadUsers);
+</script>
+{% endblock %}

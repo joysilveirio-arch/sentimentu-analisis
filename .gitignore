@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+*.db
+.env
+logs/*.log
+models/*.joblib
+uploads/*
+!uploads/.gitkeep
+.pytest_cache/.vscode/
